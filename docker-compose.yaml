@@ -1,0 +1,113 @@
+version: '3.9'
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.5
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - 2181:2181
+    volumes:
+      - ./data/zookeeper:/bitnami/zookeeper
+    networks:
+      - rust-debezium-network
+
+  kafka:
+    image: bitnami/kafka:2.8
+    ports:
+      - 9092:9092
+    volumes:
+      - ./data/kafka:/bitnami/kafka
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:29092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    depends_on:
+      - zookeeper
+    networks:
+      - rust-debezium-network
+
+  postgres:
+    image: bitnami/postgresql:12
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRESQL_USER=postgres
+      - POSTGRESQL_PASSWORD=postgres
+      - POSTGRESQL_DATABASE=demodb
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - rust-debezium-network
+
+  redis:
+    image: bitnami/redis:6.0
+    ports:
+      - 6379:6379
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - ./data/redis:/bitnami/redis/data
+    networks:
+      - rust-debezium-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 9000:8080
+    environment:
+      - DYNAMIC_CONFIG_ENABLED=true
+    volumes:
+      - ./data/kafka-ui:/etc/kafkaui
+    networks:
+      - rust-debezium-network
+
+  debezium-connect:
+    image: debezium/connect:2.5
+    ports:
+      - 8083:8083
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: debezium_connect_config
+      OFFSET_STORAGE_TOPIC: debezium_connect_offsets
+      STATUS_STORAGE_TOPIC: debezium_connect_status
+      INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      # KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      # VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    depends_on:
+      - kafka
+      - schema-registry
+    networks:
+      - rust-debezium-network
+
+  debezium-ui:
+    image: debezium/debezium-ui:latest
+    ports:
+      - 8084:8080
+    environment:
+      KAFKA_CONNECT_URIS: http://debezium-connect:8083
+    networks:
+      - rust-debezium-network
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.1.10.arm64
+    ports:
+      - 8081:8081
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://schema-registry:8081
+    networks:
+      - rust-debezium-network
+      
+
+networks:
+    rust-debezium-network:

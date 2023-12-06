@@ -16,7 +16,7 @@
     "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "key.converter": "org.apache.kafka.connect.json.JsonConverter",
-    "table.include.list": "public.factinternetsales_streaming",
+    "table.include.list": "public.cashflow",
     "slot.name": "my_test_slot_unique"
   }
 }

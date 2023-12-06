@@ -1,0 +1,23 @@
+{
+  "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+  "database.hostname": "postgres",
+  "database.port": "5432",
+  "database.user": "postgres",
+  "database.password": "postgres",
+  "database.dbname": "demodb",
+  "plugin.name": "pgoutput",
+  "topic.prefix": "my_debezium_test",
+  "database.server.name": "source",
+  "key.converter.schemas.enable": "false",
+  "value.converter.schemas.enable": "false",
+  "transforms": "unwrap",
+  "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+  "transforms.unwrap.drop.tombstones": "true",
+  "transforms.unwrap.add.fields": "op,table,lsn,source.ts_ms",
+  "transforms.unwrap.delete.handling.mode": "rewrite",
+  "transforms.unwrap.add.headers": "db",
+  "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "table.include.list": "public.cashflow",
+  "slot.name": "my_test_slot_unique"
+}
